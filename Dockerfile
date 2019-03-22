@@ -1,6 +1,6 @@
 FROM golang:1.10-stretch as build
 
-WORKDIR /go/src/github.com/AliyunContainerService/gpushare-scheduler-extender
+WORKDIR /go/src/github.com/bnulwh/gpushare-scheduler-extender
 COPY . .
 
 RUN go build -o /go/bin/gpushare-sche-extender cmd/*.go
