@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/AliyunContainerService/gpushare-scheduler-extender/pkg/cache"
+	"github.com/bnulwh/gpushare-scheduler-extender/pkg/cache"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

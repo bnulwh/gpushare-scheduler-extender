@@ -10,7 +10,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	"github.com/AliyunContainerService/gpushare-scheduler-extender/pkg/scheduler"
+	"github.com/bnulwh/gpushare-scheduler-extender/pkg/scheduler"
 
 	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
 )
