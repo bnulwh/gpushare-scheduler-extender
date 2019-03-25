@@ -18,7 +18,7 @@ Allocated/Total GPU Memory In Cluster:
 
 > For more details, please run `kubectl inspect gpushare -d`
 
-2. To request GPU sharing, you just need to specify `aliyun.com/gpu-mem`
+2. To request GPU sharing, you just need to specify `shared-gpu/gpu-mem`
 
 ```
 apiVersion: apps/v1beta1
@@ -48,7 +48,7 @@ spec:
         resources:
           limits:
             # GiB
-            aliyun.com/gpu-mem: 3
+            shared-gpu/gpu-mem: 3
 ```
 
 > Notice that the GPU memory of each GPU is 3 GiB, 3 GiB indicates one third of the GPU.
@@ -57,10 +57,10 @@ spec:
 
 ```
 # The total amount of GPU memory on the current device (GiB)
-ALIYUN_COM_GPU_MEM_DEV=15 
+SHARED_GPU_MEM_DEV=15 
 
 # The GPU Memory of the container(GiB)
-ALIYUN_COM_GPU_MEM_CONTAINER=3
+SHARED_GPU_MEM_CONTAINER=3
 ```
 
 Limit GPU memory by setting fraction through TensorFlow API

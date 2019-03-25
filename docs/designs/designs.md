@@ -79,9 +79,9 @@ Although the N3 node has a total of 8138MiB available resources, these available
 
 2.2. When the scheduler finds a node that satisfies the requirements, it will delegate the GPU Share Scheduler Extender to bind the node and the pod. Here, the extender needs to do two things:
 
-- Find the GPU device in the node according to the binpack rule, and record GPU device id and save it as `ALIYUN_GPU_ID` to the annotation of the pod.It also saves the GPU Memory of the pod application as `ALIYUN_COM_GPU_MEM_POD` and `ALIYUN_COM_GPU_MEM_ASSUME_TIME` in the annotation of the pod. If no GPU is found at the binding time, no binding is performed at this time. The default scheduler will reschedule after the expired timeout.
+- Find the GPU device in the node according to the binpack rule, and record GPU device id and save it as `SHARED_GPU_ID` to the annotation of the pod.It also saves the GPU Memory of the pod application as `SHARED_GPU_MEM_POD` and `SHARED_GPU_MEM_ASSUME_TIME` in the annotation of the pod. If no GPU is found at the binding time, no binding is performed at this time. The default scheduler will reschedule after the expired timeout.
 
-> Notice: There is also a Pod annotation named `ALIYUN_COM_GPU_MEM_ASSIGNED` which is initialized as `false`. It indicates that the pod is assumed with the GPU device in the schedule period, but not assigned at the runtime.
+> Notice: There is also a Pod annotation named `SHARED_GPU_MEM_ASSIGNED` which is initialized as `false`. It indicates that the pod is assumed with the GPU device in the schedule period, but not assigned at the runtime.
 
 - Bind pod and node with Kubernetes API
 
@@ -98,7 +98,7 @@ An `Allocate` function in GPU Share Device Plugin which is called from Kubelet b
 
 3.2 Choose the Pod with the GPU memory request amount specified in the parameter of the `Allocate` fuction. There may be some pods with the same GPU memory request amount. If so,  it chooses the Pod with the earliest assumedTimestamp.
 
-3.3 And it marks the chosen pod's annotation `ALIYUN_COM_GPU_MEM_ASSIGNED` as `true`, and it indicates the GPU device is assigned to the container in the runtime.
+3.3 And it marks the chosen pod's annotation `SHARED_GPU_MEM_ASSIGNED` as `true`, and it indicates the GPU device is assigned to the container in the runtime.
 
  
 ![](sequence.jpg)

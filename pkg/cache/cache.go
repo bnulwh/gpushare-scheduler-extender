@@ -22,7 +22,7 @@ type SchedulerCache struct {
 	//
 	podLister corelisters.PodLister
 
-	// record the knownPod, it will be added when annotation ALIYUN_GPU_ID is added, and will be removed when complete and deleted
+	// record the knownPod, it will be added when annotation SHARED_GPU_ID is added, and will be removed when complete and deleted
 	knownPods map[types.UID]*v1.Pod
 	nLock     *sync.RWMutex
 }
