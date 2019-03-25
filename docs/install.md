@@ -24,9 +24,9 @@ Enable the nvidia runtime as your default runtime on your node. To do this, plea
 
 ```
 cd /etc/kubernetes/
-curl -O https://raw.githubusercontent.com/AliyunContainerService/gpushare-scheduler-extender/master/config/scheduler-policy-config.json
+curl -O https://raw.githubusercontent.com/bnulwh/gpushare-scheduler-extender/master/config/scheduler-policy-config.json
 cd /tmp/
-curl -O https://raw.githubusercontent.com/AliyunContainerService/gpushare-scheduler-extender/master/config/gpushare-schd-extender.yaml
+curl -O https://raw.githubusercontent.com/bnulwh/gpushare-scheduler-extender/master/config/gpushare-schd-extender.yaml
 kubectl create -f gpushare-schd-extender.yaml
 ```
 
@@ -58,9 +58,9 @@ kubectl create -f gpushare-schd-extender.yaml
 3\. Deploy Device Plugin
 
 ```
-wget https://raw.githubusercontent.com/AliyunContainerService/gpushare-device-plugin/master/device-plugin-rbac.yaml
+wget https://raw.githubusercontent.com/bnulwh/gpushare-device-plugin/master/device-plugin-rbac.yaml
 kubectl create -f device-plugin-rbac.yaml
-wget https://raw.githubusercontent.com/AliyunContainerService/gpushare-device-plugin/master/device-plugin-ds.yaml
+wget https://raw.githubusercontent.com/bnulwh/gpushare-device-plugin/master/device-plugin-ds.yaml
 kubectl create -f device-plugin-ds.yaml
 ```
 
@@ -93,6 +93,6 @@ sudo mv ./kubectl /usr/bin/kubectl
 
 ```
 cd /usr/bin/
-wget https://github.com/AliyunContainerService/gpushare-device-plugin/releases/download/v0.2.0/kubectl-inspect-gpushare
+wget https://github.com/bnulwh/gpushare-device-plugin/releases/download/v0.2.0/kubectl-inspect-gpushare
 chmod u+x /usr/bin/kubectl-inspect-gpushare
 ```

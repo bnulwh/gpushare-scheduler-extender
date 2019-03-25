@@ -1,7 +1,7 @@
 # GPU Sharing Scheduler Extender in Kuberntes 
 
-[![Build Status](https://travis-ci.org/AliyunContainerService/gpushare-scheduler-extender.svg?branch=master)](https://travis-ci.org/AliyunContainerService/gpushare-scheduler-extender) 
-[![Go Report Card](https://goreportcard.com/badge/github.com/AliyunContainerService/gpushare-scheduler-extender)](https://goreportcard.com/report/github.com/AliyunContainerService/gpushare-scheduler-extender)
+[![Build Status](https://travis-ci.org/bnulwh/gpushare-scheduler-extender.svg?branch=master)](https://travis-ci.org/bnulwh/gpushare-scheduler-extender) 
+[![Go Report Card](https://goreportcard.com/badge/github.com/bnulwh/gpushare-scheduler-extender)](https://goreportcard.com/report/github.com/bnulwh/gpushare-scheduler-extender)
 
 
 ## Overview
@@ -35,14 +35,14 @@ You can check the [User Guide](docs/userguide.md) to know how to use it.
 ### Scheduler Extender
 
 ```
-# git clone https://github.com/AliyunContainerService/gpushare-scheduler-extender.git && cd gpushare-scheduler-extender
+# git clone https://github.com/bnulwh/gpushare-scheduler-extender.git && cd gpushare-scheduler-extender
 # docker build -t cheyang/gpushare-scheduler-extender .
 ```
 
 ### Device Plugin
 
 ```
-# git clone https://github.com/AliyunContainerService/gpushare-device-plugin.git && cd gpushare-device-plugin
+# git clone https://github.com/bnulwh/gpushare-device-plugin.git && cd gpushare-device-plugin
 # docker build -t cheyang/gpushare-device-plugin .
 ```
 
@@ -51,9 +51,9 @@ You can check the [User Guide](docs/userguide.md) to know how to use it.
 - golang > 1.10
 
 ```
-# mkdir -p $GOPATH/src/github.com/AliyunContainerService
-# cd $GOPATH/src/github.com/AliyunContainerService
-# git clone https://github.com/AliyunContainerService/gpushare-device-plugin.git
+# mkdir -p $GOPATH/src/github.com/bnulwh
+# cd $GOPATH/src/github.com/bnulwh
+# git clone https://github.com/bnulwh/gpushare-device-plugin.git
 # cd gpushare-device-plugin
 # go build -o $GOPATH/bin/kubectl-inspect-gpushare-v2 cmd/inspect/*.go
 ```
@@ -70,7 +70,7 @@ You can check the [User Guide](docs/userguide.md) to know how to use it.
 
 ## Related Project
 
-- [gpushare device plugin](https://github.com/AliyunContainerService/gpushare-device-plugin.git)
+- [gpushare device plugin](https://github.com/bnulwh/gpushare-device-plugin.git)
 
 ## Roadmap
 
