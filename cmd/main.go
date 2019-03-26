@@ -2,18 +2,17 @@ package main
 
 import (
 	"flag"
-	"log"
+	"fmt"
+	log "github.com/astaxie/beego/logs"
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/gpushare"
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/routes"
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/scheduler"
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/utils/signals"
-	"github.com/comail/colog"
 	"github.com/julienschmidt/httprouter"
 
 	kubeinformers "k8s.io/client-go/informers"
@@ -22,12 +21,48 @@ import (
 )
 
 const RecommendedKubeConfigPathEnv = "KUBECONFIG"
+const logPath = "/var/log/device-plugin"
 
 var (
 	clientset    *kubernetes.Clientset
 	resyncPeriod = 30 * time.Second
 	clientConfig clientcmd.ClientConfig
 )
+
+func init() {
+	beegoInit()
+}
+func beegoInit() {
+	log.EnableFuncCallDepth(true)
+	log.SetLogFuncCallDepth(3)
+	if !pathExists(logPath) {
+		fmt.Printf("dir: %s not found.", logPath)
+		err := os.MkdirAll(logPath, 0711)
+		if err != nil {
+			fmt.Printf("mkdir %s failed: %v", logPath, err)
+		}
+	}
+	err := log.SetLogger(log.AdapterMultiFile, `{"filename":"/var/log/device-plugin/nvidia.log","separate":["emergency", "alert", 
+			"critical", "error", "warning", "notice", "info", "debug"]}`)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = log.SetLogger(log.AdapterConsole, `{"level":6}`)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func pathExists(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return false
+}
 
 func initKubeClient() {
 	kubeConfig := ""
@@ -40,13 +75,13 @@ func initKubeClient() {
 	// Get kubernetes config.
 	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
 	if err != nil {
-		log.Fatalf("Error building kubeconfig: %s", err.Error())
+		log.Critical("Error building kubeconfig: %s", err.Error())
 	}
 
 	// create the clientset
 	clientset, err = kubernetes.NewForConfig(restConfig)
 	if err != nil {
-		log.Fatalf("fatal: Failed to init rest config due to %v", err)
+		log.Critical("fatal: Failed to init rest config due to %v", err)
 	}
 }
 
@@ -54,16 +89,6 @@ func main() {
 	// Call Parse() to avoid noisy logs
 	flag.CommandLine.Parse([]string{})
 
-	colog.SetDefaultLevel(colog.LInfo)
-	colog.SetMinLevel(colog.LInfo)
-	colog.SetFormatter(&colog.StdFormatter{
-		Colors: true,
-		Flag:   log.Ldate | log.Ltime | log.Lshortfile,
-	})
-	colog.Register()
-	level := StringToLevel(os.Getenv("LOG_LEVEL"))
-	log.Print("Log level was set to ", strings.ToUpper(level.String()))
-	colog.SetMinLevel(level)
 	threadness := StringToInt(os.Getenv("THREADNESS"))
 
 	initKubeClient()
@@ -78,11 +103,11 @@ func main() {
 	informerFactory := kubeinformers.NewSharedInformerFactory(clientset, resyncPeriod)
 	controller, err := gpushare.NewController(clientset, informerFactory, stopCh)
 	if err != nil {
-		log.Fatalf("Failed to start due to %v", err)
+		log.Critical("Failed to start due to %v", err)
 	}
 	err = controller.BuildCache()
 	if err != nil {
-		log.Fatalf("Failed to start due to %v", err)
+		log.Critical("Failed to start due to %v", err)
 	}
 
 	go controller.Run(threadness, stopCh)
@@ -99,29 +124,9 @@ func main() {
 	routes.AddBind(router, gpushareBind)
 	routes.AddInspect(router, gpushareInspect)
 
-	log.Printf("info: server starting on the port :%s", port)
+	log.Info("info: server starting on the port :%s", port)
 	if err := http.ListenAndServe(":"+port, router); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func StringToLevel(levelStr string) colog.Level {
-	switch level := strings.ToUpper(levelStr); level {
-	case "TRACE":
-		return colog.LTrace
-	case "DEBUG":
-		return colog.LDebug
-	case "INFO":
-		return colog.LInfo
-	case "WARNING":
-		return colog.LWarning
-	case "ERROR":
-		return colog.LError
-	case "ALERT":
-		return colog.LAlert
-	default:
-		log.Printf("warning: LOG_LEVEL=\"%s\" is empty or invalid, fallling back to \"INFO\".\n", level)
-		return colog.LInfo
+		log.Critical(err)
 	}
 }
 

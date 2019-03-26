@@ -2,7 +2,7 @@ package cache
 
 import (
 	"fmt"
-	"log"
+	log "github.com/astaxie/beego/logs"
 	"sync"
 
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/utils"
@@ -27,7 +27,7 @@ type NodeInfo struct {
 
 // Create Node Level
 func NewNodeInfo(node *v1.Node) *NodeInfo {
-	log.Printf("debug: NewNodeInfo() creates nodeInfo for %s", node.Name)
+	log.Debug("debug: NewNodeInfo() creates nodeInfo for %s", node.Name)
 
 	devMap := map[int]*DeviceInfo{}
 	for i := 0; i < utils.GetGPUCountInNode(node); i++ {
@@ -76,12 +76,12 @@ func (n *NodeInfo) removePod(pod *v1.Pod) {
 	if id >= 0 {
 		dev, found := n.devs[id]
 		if !found {
-			log.Printf("warn: Pod %s in ns %s failed to find the GPU ID %d in node %s", pod.Name, pod.Namespace, id, n.name)
+			log.Warning("warn: Pod %s in ns %s failed to find the GPU ID %d in node %s", pod.Name, pod.Namespace, id, n.name)
 		} else {
 			dev.removePod(pod)
 		}
 	} else {
-		log.Printf("warn: Pod %s in ns %s is not set the GPU ID %d in node %s", pod.Name, pod.Namespace, id, n.name)
+		log.Warning("warn: Pod %s in ns %s is not set the GPU ID %d in node %s", pod.Name, pod.Namespace, id, n.name)
 	}
 }
 
@@ -91,20 +91,20 @@ func (n *NodeInfo) addOrUpdatePod(pod *v1.Pod) (added bool) {
 	defer n.rwmu.Unlock()
 
 	id := utils.GetGPUIDFromAnnotation(pod)
-	log.Printf("debug: addOrUpdatePod() Pod %s in ns %s with the GPU ID %d should be added to device map",
+	log.Debug("debug: addOrUpdatePod() Pod %s in ns %s with the GPU ID %d should be added to device map",
 		pod.Name,
 		pod.Namespace,
 		id)
 	if id >= 0 {
 		dev, found := n.devs[id]
 		if !found {
-			log.Printf("warn: Pod %s in ns %s failed to find the GPU ID %d in node %s", pod.Name, pod.Namespace, id, n.name)
+			log.Warning("warn: Pod %s in ns %s failed to find the GPU ID %d in node %s", pod.Name, pod.Namespace, id, n.name)
 		} else {
 			dev.addPod(pod)
 			added = true
 		}
 	} else {
-		log.Printf("warn: Pod %s in ns %s is not set the GPU ID %d in node %s", pod.Name, pod.Namespace, id, n.name)
+		log.Warning("warn: Pod %s in ns %s is not set the GPU ID %d in node %s", pod.Name, pod.Namespace, id, n.name)
 	}
 	return added
 }
@@ -118,7 +118,7 @@ func (n *NodeInfo) Assume(pod *v1.Pod) (allocatable bool) {
 
 	availableGPUs := n.getAvailableGPUs()
 	reqGPU := uint(utils.GetGPUMemoryFromPodResource(pod))
-	log.Printf("debug: AvailableGPUs: %v in node %s", availableGPUs, n.name)
+	log.Debug("debug: AvailableGPUs: %v in node %s", availableGPUs, n.name)
 
 	if len(availableGPUs) > 0 {
 		for devID := 0; devID < len(n.devs); devID++ {
@@ -140,11 +140,11 @@ func (n *NodeInfo) Allocate(clientset *kubernetes.Clientset, pod *v1.Pod) (err e
 	var newPod *v1.Pod
 	n.rwmu.Lock()
 	defer n.rwmu.Unlock()
-	log.Printf("debug: Allocate() ----Begin to allocate GPU for gpu mem for pod %s in ns %s----", pod.Name, pod.Namespace)
+	log.Debug("debug: Allocate() ----Begin to allocate GPU for gpu mem for pod %s in ns %s----", pod.Name, pod.Namespace)
 	// 1. Update the pod spec
 	devId, found := n.allocateGPUID(pod)
 	if found {
-		log.Printf("debug: Allocate() 1. Allocate GPU ID %d to pod %s in ns %s.----", devId, pod.Name, pod.Namespace)
+		log.Debug("debug: Allocate() 1. Allocate GPU ID %d to pod %s in ns %s.----", devId, pod.Name, pod.Namespace)
 		// newPod := utils.GetUpdatedPodEnvSpec(pod, devId, nodeInfo.GetTotalGPUMemory()/nodeInfo.GetGPUCount())
 		newPod = utils.GetUpdatedPodAnnotationSpec(pod, devId, n.GetTotalGPUMemory()/n.GetGPUCount())
 		_, err = clientset.CoreV1().Pods(newPod.Namespace).Update(newPod)
@@ -176,32 +176,32 @@ func (n *NodeInfo) Allocate(clientset *kubernetes.Clientset, pod *v1.Pod) (err e
 			ObjectMeta: metav1.ObjectMeta{Name: pod.Name, UID: pod.UID},
 			Target:     v1.ObjectReference{Kind: "Node", Name: n.name},
 		}
-		log.Printf("debug: Allocate() 2. Try to bind pod %s in %s namespace to node %s with %v",
+		log.Debug("debug: Allocate() 2. Try to bind pod %s in %s namespace to node %s with %v",
 			pod.Name,
 			pod.Namespace,
 			pod.Spec.NodeName,
 			binding)
 		err = clientset.CoreV1().Pods(pod.Namespace).Bind(binding)
 		if err != nil {
-			log.Printf("warn: Failed to bind the pod %s in ns %s due to %v", pod.Name, pod.Namespace, err)
+			log.Warning("warn: Failed to bind the pod %s in ns %s due to %v", pod.Name, pod.Namespace, err)
 			return err
 		}
 	}
 
 	// 3. update the device info if the pod is update successfully
 	if err == nil {
-		log.Printf("debug: Allocate() 3. Try to add pod %s in ns %s to dev %d",
+		log.Debug("debug: Allocate() 3. Try to add pod %s in ns %s to dev %d",
 			pod.Name,
 			pod.Namespace,
 			devId)
 		dev, found := n.devs[devId]
 		if !found {
-			log.Printf("warn: Pod %s in ns %s failed to find the GPU ID %d in node %s", pod.Name, pod.Namespace, devId, n.name)
+			log.Warning("warn: Pod %s in ns %s failed to find the GPU ID %d in node %s", pod.Name, pod.Namespace, devId, n.name)
 		} else {
 			dev.addPod(newPod)
 		}
 	}
-	log.Printf("debug: Allocate() ----End to allocate GPU for gpu mem for pod %s in ns %s----", pod.Name, pod.Namespace)
+	log.Debug("debug: Allocate() ----End to allocate GPU for gpu mem for pod %s in ns %s----", pod.Name, pod.Namespace)
 	return err
 }
 
@@ -217,8 +217,8 @@ func (n *NodeInfo) allocateGPUID(pod *v1.Pod) (candidateDevID int, found bool) {
 	reqGPU = uint(utils.GetGPUMemoryFromPodResource(pod))
 
 	if reqGPU > uint(0) {
-		log.Printf("debug: reqGPU for pod %s in ns %s: %d", pod.Name, pod.Namespace, reqGPU)
-		log.Printf("debug: AvailableGPUs: %v in node %s", availableGPUs, n.name)
+		log.Debug("debug: reqGPU for pod %s in ns %s: %d", pod.Name, pod.Namespace, reqGPU)
+		log.Debug("debug: AvailableGPUs: %v in node %s", availableGPUs, n.name)
 		if len(availableGPUs) > 0 {
 			for devID := 0; devID < len(n.devs); devID++ {
 				availableGPU, ok := availableGPUs[devID]
@@ -236,12 +236,12 @@ func (n *NodeInfo) allocateGPUID(pod *v1.Pod) (candidateDevID int, found bool) {
 		}
 
 		if found {
-			log.Printf("debug: Find candidate dev id %d for pod %s in ns %s successfully.",
+			log.Debug("debug: Find candidate dev id %d for pod %s in ns %s successfully.",
 				candidateDevID,
 				pod.Name,
 				pod.Namespace)
 		} else {
-			log.Printf("warn: Failed to find available GPUs %d for the pod %s in the namespace %s",
+			log.Warning("warn: Failed to find available GPUs %d for the pod %s in the namespace %s",
 				reqGPU,
 				pod.Name,
 				pod.Namespace)
@@ -269,7 +269,7 @@ func (n *NodeInfo) getUsedGPUs() (usedGPUs map[int]uint) {
 	for _, dev := range n.devs {
 		usedGPUs[dev.idx] = dev.GetUsedGPUMemory()
 	}
-	log.Printf("debug: getUsedGPUs: %v in node %s, and devs %v", usedGPUs, n.name, n.devs)
+	log.Debug("debug: getUsedGPUs: %v in node %s, and devs %v", usedGPUs, n.name, n.devs)
 	return usedGPUs
 }
 
@@ -279,6 +279,6 @@ func (n *NodeInfo) getAllGPUs() (allGPUs map[int]uint) {
 	for _, dev := range n.devs {
 		allGPUs[dev.idx] = dev.totalGPUMem
 	}
-	log.Printf("debug: getAllGPUs: %v in node %s, and dev %v", allGPUs, n.name, n.devs)
+	log.Debug("debug: getAllGPUs: %v in node %s, and dev %v", allGPUs, n.name, n.devs)
 	return allGPUs
 }

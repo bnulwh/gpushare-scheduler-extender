@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"log"
+	log "github.com/astaxie/beego/logs"
 	"sync"
 
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/utils"
@@ -47,7 +47,7 @@ func (cache *SchedulerCache) GetNodeinfos() []*NodeInfo {
 
 // build cache when initializing
 func (cache *SchedulerCache) BuildCache() error {
-	log.Println("debug: begin to build scheduler cache")
+	log.Debug("debug: begin to build scheduler cache")
 	pods, err := cache.podLister.List(labels.Everything())
 
 	if err != nil {
@@ -87,10 +87,10 @@ func (cache *SchedulerCache) KnownPod(podUID types.UID) bool {
 }
 
 func (cache *SchedulerCache) AddOrUpdatePod(pod *v1.Pod) error {
-	log.Printf("debug: Add or update pod info: %v", pod)
-	log.Printf("debug: Node %v", cache.nodes)
+	log.Debug("debug: Add or update pod info: %v", pod)
+	log.Debug("debug: Node %v", cache.nodes)
 	if len(pod.Spec.NodeName) == 0 {
-		log.Printf("debug: pod %s in ns %s is not assigned to any node, skip", pod.Name, pod.Namespace)
+		log.Debug("debug: pod %s in ns %s is not assigned to any node, skip", pod.Name, pod.Namespace)
 		return nil
 	}
 
@@ -103,7 +103,7 @@ func (cache *SchedulerCache) AddOrUpdatePod(pod *v1.Pod) error {
 		// put it into known pod
 		cache.rememberPod(pod.UID, podCopy)
 	} else {
-		log.Printf("debug: pod %s in ns %s's gpu id is %d, it's illegal, skip",
+		log.Debug("debug: pod %s in ns %s's gpu id is %d, it's illegal, skip",
 			pod.Name,
 			pod.Namespace,
 			utils.GetGPUIDFromAnnotation(pod))
@@ -114,13 +114,13 @@ func (cache *SchedulerCache) AddOrUpdatePod(pod *v1.Pod) error {
 
 // The lock is in cacheNode
 func (cache *SchedulerCache) RemovePod(pod *v1.Pod) {
-	log.Printf("debug: Remove pod info: %v", pod)
-	log.Printf("debug: Node %v", cache.nodes)
+	log.Debug("debug: Remove pod info: %v", pod)
+	log.Debug("debug: Node %v", cache.nodes)
 	n, err := cache.GetNodeInfo(pod.Spec.NodeName)
 	if err == nil {
 		n.removePod(pod)
 	} else {
-		log.Printf("debug: Failed to get node %s due to %v", pod.Spec.NodeName, err)
+		log.Debug("debug: Failed to get node %s due to %v", pod.Spec.NodeName, err)
 	}
 
 	cache.forgetPod(pod.UID)
@@ -148,7 +148,7 @@ func (cache *SchedulerCache) GetNodeInfo(name string) (*NodeInfo, error) {
 			if err != nil {
 				return nil, err
 			}
-			log.Printf("debug: GetNodeInfo() need update node %s from %v to %v",
+			log.Debug("debug: GetNodeInfo() need update node %s from %v to %v",
 				name,
 				n.node,
 				node)
@@ -156,7 +156,7 @@ func (cache *SchedulerCache) GetNodeInfo(name string) (*NodeInfo, error) {
 			cache.nodes[name] = n
 		}
 
-		log.Printf("debug: GetNodeInfo() uses the existing nodeInfo for %s", name)
+		log.Debug("debug: GetNodeInfo() uses the existing nodeInfo for %s", name)
 	}
 	return n, nil
 }

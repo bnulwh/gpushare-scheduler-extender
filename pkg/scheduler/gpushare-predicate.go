@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	"fmt"
-	"log"
+	log "github.com/astaxie/beego/logs"
 
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/cache"
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/utils"
@@ -14,7 +14,7 @@ func NewGPUsharePredicate(clientset *kubernetes.Clientset, c *cache.SchedulerCac
 	return &Predicate{
 		Name: "gpusharingfilter",
 		Func: func(pod *v1.Pod, nodeName string, c *cache.SchedulerCache) (bool, error) {
-			log.Printf("debug: check if the pod name %s can be scheduled on node %s", pod.Name, nodeName)
+			log.Debug("debug: check if the pod name %s can be scheduled on node %s", pod.Name, nodeName)
 			nodeInfo, err := c.GetNodeInfo(nodeName)
 			if err != nil {
 				return false, err
@@ -28,7 +28,7 @@ func NewGPUsharePredicate(clientset *kubernetes.Clientset, c *cache.SchedulerCac
 			if !allocatable {
 				return false, fmt.Errorf("Insufficient GPU Memory in one device")
 			} else {
-				log.Printf("debug: The pod %s in the namespace %s can be scheduled on %s",
+				log.Debug("debug: The pod %s in the namespace %s can be scheduled on %s",
 					pod.Name,
 					pod.Namespace,
 					nodeName)

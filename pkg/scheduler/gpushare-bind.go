@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	"fmt"
-	"log"
+	log "github.com/astaxie/beego/logs"
 
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/cache"
 	"k8s.io/api/core/v1"
@@ -21,18 +21,18 @@ func NewGPUShareBind(clientset *kubernetes.Clientset, c *cache.SchedulerCache) *
 		Func: func(name string, namespace string, podUID types.UID, node string, c *cache.SchedulerCache) error {
 			pod, err := getPod(name, namespace, podUID, clientset, c)
 			if err != nil {
-				log.Printf("warn: Failed to handle pod %s in ns %s due to error %v", name, namespace, err)
+				log.Warning("warn: Failed to handle pod %s in ns %s due to error %v", name, namespace, err)
 				return err
 			}
 
 			nodeInfo, err := c.GetNodeInfo(node)
 			if err != nil {
-				log.Printf("warn: Failed to handle pod %s in ns %s due to error %v", name, namespace, err)
+				log.Warning("warn: Failed to handle pod %s in ns %s due to error %v", name, namespace, err)
 				return err
 			}
 			err = nodeInfo.Allocate(clientset, pod)
 			if err != nil {
-				log.Printf("warn: Failed to handle pod %s in ns %s due to error %v", name, namespace, err)
+				log.Warning("warn: Failed to handle pod %s in ns %s due to error %v", name, namespace, err)
 				return err
 			}
 			return nil
@@ -44,7 +44,7 @@ func NewGPUShareBind(clientset *kubernetes.Clientset, c *cache.SchedulerCache) *
 func getPod(name string, namespace string, podUID types.UID, clientset *kubernetes.Clientset, c *cache.SchedulerCache) (*v1.Pod, error) {
 	pod, err := c.GetPod(name, namespace)
 	if err != nil {
-		log.Printf("warn: Failed to handle pod %s in ns %s due to error %v", name, namespace, err)
+		log.Warning("warn: Failed to handle pod %s in ns %s due to error %v", name, namespace, err)
 		return nil, err
 	}
 	if pod.UID != podUID {

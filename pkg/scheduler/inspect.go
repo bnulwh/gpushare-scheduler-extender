@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"github.com/astaxie/beego/logs"
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/cache"
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/utils"
 )
@@ -58,7 +59,8 @@ func buildNode(info *cache.NodeInfo) *Node {
 		devs = append(devs, dev)
 		usedGPU += devInfo.GetUsedGPUMemory()
 	}
-
+	logs.Info("node: %s, total gpu: %v, used gpu: %v, devices: %v",
+		info.GetName(), info.GetTotalGPUMemory(), usedGPU, devs)
 	return &Node{
 		Name:     info.GetName(),
 		TotalGPU: uint(info.GetTotalGPUMemory()),
