@@ -12,7 +12,7 @@ import (
 
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/scheduler"
 
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
+	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api/v1"
 )
 
 const (

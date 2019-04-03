@@ -28,18 +28,22 @@
 [[constraint]]
   name = "k8s.io/kubernetes"
   version = "v1.11.2"
+  source = "github.com/kubernetes/kubernetes"
 
 [[constraint]]
   name = "k8s.io/apimachinery"
   branch = "release-1.11"
+  source = "github.com/kubernetes/apimachinery"
 
 [[constraint]]
   name = "k8s.io/client-go"
   version = "~v8.0.0"
+  source = "github.com/kubernetes/client-go"
 
 [[override]]
   name = "k8s.io/api"
   version = "kubernetes-1.11.2"
+  source = "github.com/kubernetes/api"
 
 [[override]]
   name = "github.com/gregjones/httpcache"

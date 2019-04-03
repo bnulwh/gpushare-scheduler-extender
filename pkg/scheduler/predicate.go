@@ -2,13 +2,13 @@ package scheduler
 
 import (
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/cache"
-	"k8s.io/api/core/v1"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/api"
+	apivi "k8s.io/api/core/v1"
+	schedulerapi "k8s.io/kubernetes/plugin/pkg/scheduler/api/v1"
 )
 
 type Predicate struct {
 	Name  string
-	Func  func(pod *v1.Pod, nodeName string, c *cache.SchedulerCache) (bool, error)
+	Func  func(pod *apivi.Pod, nodeName string, c *cache.SchedulerCache) (bool, error)
 	cache *cache.SchedulerCache
 }
 
@@ -19,7 +19,7 @@ func (p Predicate) Handler(args schedulerapi.ExtenderArgs) *schedulerapi.Extende
 	canNotSchedule := make(map[string]string)
 
 	for _, nodeName := range nodeNames {
-		result, err := p.Func(pod, nodeName, p.cache)
+		result, err := p.Func(&pod, nodeName, p.cache)
 		if err != nil {
 			canNotSchedule[nodeName] = err.Error()
 		} else {

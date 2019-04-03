@@ -13,6 +13,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+
 	clientgocache "k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 
@@ -64,6 +65,7 @@ func NewController(clientset *kubernetes.Clientset, kubeInformerFactory kubeinfo
 	eventBroadcaster := record.NewBroadcaster()
 	// eventBroadcaster.StartLogging(log.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: clientset.CoreV1().Events("")})
+	//eventBroadcaster.StartRecordingToSink(nil)
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "gpushare-schd-extender"})
 
 	c := &Controller{
