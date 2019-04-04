@@ -105,10 +105,7 @@ func GetGPUMemoryFromPodAnnotation(pod *v1.Pod) (gpuMemory uint) {
 	}
 
 	log.Debug("debug: pod %s in ns %s with status %v has GPU Mem %d",
-		pod.Name,
-		pod.Namespace,
-		pod.Status.Phase,
-		gpuMemory)
+		pod.Name, pod.Namespace, pod.Status.Phase, gpuMemory)
 	return gpuMemory
 }
 
@@ -117,11 +114,8 @@ func GetGPUMemoryFromPodEnv(pod *v1.Pod) (gpuMemory uint) {
 	for _, container := range pod.Spec.Containers {
 		gpuMemory += getGPUMemoryFromContainerEnv(container)
 	}
-	log.Debug("debug: pod %s in ns %s with status %v has GPU Mem %d",
-		pod.Name,
-		pod.Namespace,
-		pod.Status.Phase,
-		gpuMemory)
+	log.Debug("pod %s in ns %s with status %v has GPU Mem %d Mib",
+		pod.Name, pod.Namespace, pod.Status.Phase, gpuMemory)
 	return gpuMemory
 }
 
@@ -179,8 +173,9 @@ func GetUpdatedPodEnvSpec(oldPod *v1.Pod, devId int, totalGPUMemByDev int) (newP
 			}
 
 			for _, env := range envs {
-				newPod.Spec.Containers[i].Env = append(newPod.Spec.Containers[i].Env,
-					env)
+				newPod.Spec.Containers[i].Env = append(newPod.Spec.Containers[i].Env, env)
+				log.Info("Container %s of New Pod %s in ns %s Has env %s='%s'",
+					c.Name, newPod.Name, newPod.Namespace, env.Name, env.Value)
 			}
 		}
 	}
@@ -198,9 +193,20 @@ func GetUpdatedPodAnnotationSpec(oldPod *v1.Pod, devId int, totalGPUMemByDev int
 	now := time.Now()
 	newPod.ObjectMeta.Annotations[EnvResourceIndex] = fmt.Sprintf("%d", devId)
 	newPod.ObjectMeta.Annotations[EnvResourceByDev] = fmt.Sprintf("%d", totalGPUMemByDev)
-	newPod.ObjectMeta.Annotations[EnvResourceByPod] = fmt.Sprintf("%d", GetGPUMemoryFromPodResource(newPod))
+	mem := GetGPUMemoryFromPodResource(newPod)
+	newPod.ObjectMeta.Annotations[EnvResourceByPod] = fmt.Sprintf("%d", mem)
 	newPod.ObjectMeta.Annotations[EnvAssignedFlag] = "false"
 	newPod.ObjectMeta.Annotations[EnvResourceAssumeTime] = fmt.Sprintf("%d", now.UnixNano())
+	log.Info("New Pod %s in ns %s Annotations[%s] = %d",
+		newPod.Name, newPod.Namespace, EnvResourceIndex, devId)
+	log.Info("New Pod %s in ns %s Annotations[%s] = %d",
+		newPod.Name, newPod.Namespace, EnvResourceByDev, totalGPUMemByDev)
+	log.Info("New Pod %s in ns %s Annotations[%s] = %d",
+		newPod.Name, newPod.Namespace, EnvResourceByPod, mem)
+	log.Info("New Pod %s in ns %s Annotations[%s] = false",
+		newPod.Name, newPod.Namespace, EnvAssignedFlag)
+	log.Info("New Pod %s in ns %s Annotations[%s] = %d",
+		newPod.Name, newPod.Namespace, EnvResourceAssumeTime, now.UnixNano())
 
 	return newPod
 }

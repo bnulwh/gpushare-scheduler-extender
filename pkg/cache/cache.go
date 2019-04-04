@@ -47,7 +47,7 @@ func (cache *SchedulerCache) GetNodeinfos() []*NodeInfo {
 
 // build cache when initializing
 func (cache *SchedulerCache) BuildCache() error {
-	log.Debug("debug: begin to build scheduler cache")
+	log.Debug("begin to build scheduler cache")
 	pods, err := cache.podLister.List(labels.Everything())
 
 	if err != nil {

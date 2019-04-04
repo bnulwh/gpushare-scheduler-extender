@@ -14,21 +14,24 @@ func NewGPUsharePredicate(clientset *kubernetes.Clientset, c *cache.SchedulerCac
 	return &Predicate{
 		Name: "gpusharingfilter",
 		Func: func(pod *v1.Pod, nodeName string, c *cache.SchedulerCache) (bool, error) {
-			log.Debug("debug: check if the pod name %s can be scheduled on node %s", pod.Name, nodeName)
+			log.Debug("check if the pod name %s can be scheduled on node %s", pod.Name, nodeName)
 			nodeInfo, err := c.GetNodeInfo(nodeName)
 			if err != nil {
+				log.Warning("get node %s info failed: %s", nodeName, err)
 				return false, err
 			}
 
 			if !utils.IsGPUSharingNode(nodeInfo.GetNode()) {
+				log.Info("The node %s is not for GPU share, need skip", nodeName)
 				return false, fmt.Errorf("The node %s is not for GPU share, need skip", nodeName)
 			}
 
 			allocatable := nodeInfo.Assume(pod)
 			if !allocatable {
+				log.Info("The node %s insufficient GPU Memory in one device", nodeName)
 				return false, fmt.Errorf("Insufficient GPU Memory in one device")
 			} else {
-				log.Debug("debug: The pod %s in the namespace %s can be scheduled on %s",
+				log.Debug("The pod %s in the namespace %s can be scheduled on %s",
 					pod.Name, pod.Namespace, nodeName)
 			}
 			return true, nil

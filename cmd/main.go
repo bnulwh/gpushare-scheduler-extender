@@ -71,17 +71,20 @@ func initKubeClient() {
 		// This is very useful for running locally.
 		kubeConfig = os.Getenv(RecommendedKubeConfigPathEnv)
 	}
-
+	log.Debug("kube config path: %s", kubeConfig)
 	// Get kubernetes config.
 	restConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
 	if err != nil {
 		log.Critical("Error building kubeconfig: %s", err.Error())
 	}
-
+	log.Debug("kube config: host: %s, APIPath: %s, Prefix: %s, user: %s",
+		restConfig.Host, restConfig.APIPath, restConfig.Prefix, restConfig.Username)
 	// create the clientset
 	clientset, err = kubernetes.NewForConfig(restConfig)
 	if err != nil {
-		log.Critical("fatal: Failed to init rest config due to %v", err)
+		log.Critical("Failed to init rest config due to %v", err)
+	} else {
+		log.Info("connect to kube apiserver %s ok", restConfig.Host)
 	}
 }
 
@@ -104,10 +107,14 @@ func main() {
 	controller, err := gpushare.NewController(clientset, informerFactory, stopCh)
 	if err != nil {
 		log.Critical("Failed to start due to %v", err)
+	} else {
+		log.Info("Create Controller ok")
 	}
 	err = controller.BuildCache()
 	if err != nil {
 		log.Critical("Failed to start due to %v", err)
+	} else {
+		log.Info("Build controller cache ok.")
 	}
 
 	go controller.Run(threadness, stopCh)
@@ -124,7 +131,7 @@ func main() {
 	routes.AddBind(router, gpushareBind)
 	routes.AddInspect(router, gpushareInspect)
 
-	log.Info("info: server starting on the port :%s", port)
+	log.Info("Server starting on the port :%s", port)
 	if err := http.ListenAndServe(":"+port, router); err != nil {
 		log.Critical(err)
 	}
