@@ -1,4 +1,4 @@
-FROM 5ibnu/golang:1.10-cuda8.0-devel-centos7 as build
+FROM 5ibnu/golang:1.10-centos7.4.1708 as build
 
 WORKDIR /go/src/github.com/bnulwh/gpushare-scheduler-extender
 COPY . .

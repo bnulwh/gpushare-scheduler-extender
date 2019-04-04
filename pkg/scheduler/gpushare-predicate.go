@@ -29,9 +29,7 @@ func NewGPUsharePredicate(clientset *kubernetes.Clientset, c *cache.SchedulerCac
 				return false, fmt.Errorf("Insufficient GPU Memory in one device")
 			} else {
 				log.Debug("debug: The pod %s in the namespace %s can be scheduled on %s",
-					pod.Name,
-					pod.Namespace,
-					nodeName)
+					pod.Name, pod.Namespace, nodeName)
 			}
 			return true, nil
 		},

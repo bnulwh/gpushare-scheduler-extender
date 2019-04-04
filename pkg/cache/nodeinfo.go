@@ -73,11 +73,13 @@ func (n *NodeInfo) removePod(pod *v1.Pod) {
 	defer n.rwmu.Unlock()
 
 	id := utils.GetGPUIDFromAnnotation(pod)
+	log.Info("POD %s in ns %s,it's GPU id is %d", pod.Name, pod.Namespace, id)
 	if id >= 0 {
 		dev, found := n.devs[id]
 		if !found {
 			log.Warning("warn: Pod %s in ns %s failed to find the GPU ID %d in node %s", pod.Name, pod.Namespace, id, n.name)
 		} else {
+			log.Info("POD %s in ns %s,it's GPU dev is %d", pod.Name, pod.Namespace, dev.idx)
 			dev.removePod(pod)
 		}
 	} else {
@@ -118,8 +120,8 @@ func (n *NodeInfo) Assume(pod *v1.Pod) (allocatable bool) {
 
 	availableGPUs := n.getAvailableGPUs()
 	reqGPU := uint(utils.GetGPUMemoryFromPodResource(pod))
-	log.Debug("debug: AvailableGPUs: %v in node %s", availableGPUs, n.name)
-
+	log.Info("AvailableGPUs: %v in node %s", availableGPUs, n.name)
+	log.Info("Pod %s in ns %s need %s %s Mib", pod.Name, pod.Namespace, utils.ResourceName, reqGPU)
 	if len(availableGPUs) > 0 {
 		for devID := 0; devID < len(n.devs); devID++ {
 			availableGPU, ok := availableGPUs[devID]
@@ -177,10 +179,7 @@ func (n *NodeInfo) Allocate(clientset *kubernetes.Clientset, pod *v1.Pod) (err e
 			Target:     v1.ObjectReference{Kind: "Node", Name: n.name},
 		}
 		log.Debug("debug: Allocate() 2. Try to bind pod %s in %s namespace to node %s with %v",
-			pod.Name,
-			pod.Namespace,
-			pod.Spec.NodeName,
-			binding)
+			pod.Name, pod.Namespace, pod.Spec.NodeName, binding)
 		err = clientset.CoreV1().Pods(pod.Namespace).Bind(binding)
 		if err != nil {
 			log.Warning("warn: Failed to bind the pod %s in ns %s due to %v", pod.Name, pod.Namespace, err)
@@ -191,9 +190,7 @@ func (n *NodeInfo) Allocate(clientset *kubernetes.Clientset, pod *v1.Pod) (err e
 	// 3. update the device info if the pod is update successfully
 	if err == nil {
 		log.Debug("debug: Allocate() 3. Try to add pod %s in ns %s to dev %d",
-			pod.Name,
-			pod.Namespace,
-			devId)
+			pod.Name, pod.Namespace, devId)
 		dev, found := n.devs[devId]
 		if !found {
 			log.Warning("warn: Pod %s in ns %s failed to find the GPU ID %d in node %s", pod.Name, pod.Namespace, devId, n.name)
@@ -237,14 +234,10 @@ func (n *NodeInfo) allocateGPUID(pod *v1.Pod) (candidateDevID int, found bool) {
 
 		if found {
 			log.Debug("debug: Find candidate dev id %d for pod %s in ns %s successfully.",
-				candidateDevID,
-				pod.Name,
-				pod.Namespace)
+				candidateDevID, pod.Name, pod.Namespace)
 		} else {
 			log.Warning("warn: Failed to find available GPUs %d for the pod %s in the namespace %s",
-				reqGPU,
-				pod.Name,
-				pod.Namespace)
+				reqGPU, pod.Name, pod.Namespace)
 		}
 	}
 

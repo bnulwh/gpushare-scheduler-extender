@@ -47,8 +47,10 @@ func (d *DeviceInfo) GetUsedGPUMemory() (gpuMem uint) {
 			log.Debug("debug: skip the pod %s in ns %s due to its status is %s", pod.Name, pod.Namespace, pod.Status.Phase)
 			continue
 		}
+		memUsed := utils.GetGPUMemoryFromPodAnnotation(pod)
+		log.Info("POD %s in ns %s use GPU memory %d MiB", pod.Name, pod.Namespace, memUsed)
 		// gpuMem += utils.GetGPUMemoryFromPodEnv(pod)
-		gpuMem += utils.GetGPUMemoryFromPodAnnotation(pod)
+		gpuMem += memUsed
 	}
 	return gpuMem
 }

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	log "github.com/astaxie/beego/logs"
 	"io"
-	"log"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -42,7 +42,7 @@ func InspectRoute(inspect *scheduler.Inspect) httprouter.Handle {
 
 		if resultBody, err := json.Marshal(result); err != nil {
 			// panic(err)
-			log.Printf("warn: Failed due to %v", err)
+			log.Warning("Failed due to %v", err)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			errMsg := fmt.Sprintf("{'error':'%s'}", err.Error())
@@ -71,26 +71,26 @@ func PredicateRoute(predicate *scheduler.Predicate) httprouter.Handle {
 
 		if err := json.NewDecoder(body).Decode(&extenderArgs); err != nil {
 
-			log.Printf("warn: failed to parse request due to error %v", err)
+			log.Warning("failed to parse request due to error %v", err)
 			extenderFilterResult = &schedulerapi.ExtenderFilterResult{
 				Nodes:       nil,
 				FailedNodes: nil,
 				Error:       err.Error(),
 			}
 		} else {
-			log.Printf("debug: gpusharingfilter ExtenderArgs =%v", extenderArgs)
+			log.Debug("gpusharingfilter ExtenderArgs =%v", extenderArgs)
 			extenderFilterResult = predicate.Handler(extenderArgs)
 		}
 
 		if resultBody, err := json.Marshal(extenderFilterResult); err != nil {
 			// panic(err)
-			log.Printf("warn: Failed due to %v", err)
+			log.Warning("Failed due to %v", err)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			errMsg := fmt.Sprintf("{'error':'%s'}", err.Error())
 			w.Write([]byte(errMsg))
 		} else {
-			log.Print("info: ", predicate.Name, " extenderFilterResult = ", string(resultBody))
+			log.Info("info: ", predicate.Name, " extenderFilterResult = ", string(resultBody))
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			w.Write(resultBody)
@@ -118,7 +118,7 @@ func BindRoute(bind *scheduler.Bind) httprouter.Handle {
 			}
 			failed = true
 		} else {
-			log.Printf("debug: gpusharingBind ExtenderArgs =%v", extenderBindingArgs)
+			log.Debug("gpusharingBind ExtenderArgs =%v", extenderBindingArgs)
 			extenderBindingResult = bind.Handler(extenderBindingArgs)
 		}
 
@@ -127,14 +127,14 @@ func BindRoute(bind *scheduler.Bind) httprouter.Handle {
 		}
 
 		if resultBody, err := json.Marshal(extenderBindingResult); err != nil {
-			log.Printf("warn: Failed due to %v", err)
+			log.Warning("Failed due to %v", err)
 			// panic(err)
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusInternalServerError)
 			errMsg := fmt.Sprintf("{'error':'%s'}", err.Error())
 			w.Write([]byte(errMsg))
 		} else {
-			log.Print("info: extenderBindingResult = ", string(resultBody))
+			log.Info("extenderBindingResult = ", string(resultBody))
 			w.Header().Set("Content-Type", "application/json")
 			if failed {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -157,9 +157,9 @@ func AddVersion(router *httprouter.Router) {
 
 func DebugLogging(h httprouter.Handle, path string) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-		log.Print("debug: ", path, " request body = ", r.Body)
+		log.Debug("debug: %s  request body = %s", path, r.Body)
 		h(w, r, p)
-		log.Print("debug: ", path, " response=", w)
+		log.Debug("debug: %s response= %s", path, w)
 	}
 }
 
@@ -170,7 +170,7 @@ func AddPredicate(router *httprouter.Router, predicate *scheduler.Predicate) {
 
 func AddBind(router *httprouter.Router, bind *scheduler.Bind) {
 	if handle, _, _ := router.Lookup("POST", bindPrefix); handle != nil {
-		log.Print("warning: AddBind was called more then once!")
+		log.Warning("AddBind was called more then once!")
 	} else {
 		router.POST(bindPrefix, DebugLogging(BindRoute(bind), bindPrefix))
 	}

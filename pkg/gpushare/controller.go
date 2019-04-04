@@ -147,17 +147,17 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer runtime.HandleCrash()
 	defer c.podQueue.ShutDown()
 
-	log.Info("info: Starting GPU Sharing Controller.")
-	log.Info("info: Waiting for informer caches to sync")
+	log.Info("======Starting GPU Sharing Controller.")
+	log.Info("======Waiting for informer caches to sync")
 
-	log.Info("info: Starting %v workers.", threadiness)
+	log.Info("======Starting %v workers.", threadiness)
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 
-	log.Info("info: Started workers")
+	log.Info("======Started workers")
 	<-stopCh
-	log.Info("info: Shutting down workers")
+	log.Info("======Shutting down workers")
 
 	return nil
 }
@@ -286,21 +286,13 @@ func (c *Controller) updatePodInCache(oldObj, newObj interface{}) {
 			return
 		}
 		log.Info("info: Need to update pod name %s in ns %s and old status is %v, new status is %v; its old annotation %v and new annotation %v",
-			newPod.Name,
-			newPod.Namespace,
-			oldPod.Status.Phase,
-			newPod.Status.Phase,
-			oldPod.Annotations,
-			newPod.Annotations)
+			newPod.Name, newPod.Namespace, oldPod.Status.Phase, newPod.Status.Phase,
+			oldPod.Annotations, newPod.Annotations)
 		c.podQueue.Add(podKey)
 	} else {
 		log.Debug("debug: No need to update pod name %s in ns %s and old status is %v, new status is %v; its old annotation %v and new annotation %v",
-			newPod.Name,
-			newPod.Namespace,
-			oldPod.Status.Phase,
-			newPod.Status.Phase,
-			oldPod.Annotations,
-			newPod.Annotations)
+			newPod.Name, newPod.Namespace, oldPod.Status.Phase, newPod.Status.Phase,
+			oldPod.Annotations, newPod.Annotations)
 	}
 
 	return
