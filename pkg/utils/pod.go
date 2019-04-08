@@ -50,7 +50,7 @@ func GetGPUIDFromAnnotation(pod *v1.Pod) int {
 			var err error
 			id, err = strconv.Atoi(value)
 			if err != nil {
-				log.Warning("warn: Failed due to %v for pod %s in ns %s", err, pod.Name, pod.Namespace)
+				log.Warning("Failed due to %v for pod %s in ns %s", err, pod.Name, pod.Namespace)
 				id = -1
 			}
 		}
@@ -80,7 +80,7 @@ loop:
 		if env.Name == EnvResourceIndex {
 			devIdx, err = strconv.Atoi(env.Value)
 			if err != nil {
-				log.Warning("warn: Failed due to %v for %s", err, container.Name)
+				log.Warning("Failed due to %v for %s", err, container.Name)
 				devIdx = -1
 			}
 			break loop
@@ -104,7 +104,7 @@ func GetGPUMemoryFromPodAnnotation(pod *v1.Pod) (gpuMemory uint) {
 		}
 	}
 
-	log.Debug("debug: pod %s in ns %s with status %v has GPU Mem %d",
+	log.Debug("pod %s in ns %s with status %v has GPU Mem %d MiB",
 		pod.Name, pod.Namespace, pod.Status.Phase, gpuMemory)
 	return gpuMemory
 }

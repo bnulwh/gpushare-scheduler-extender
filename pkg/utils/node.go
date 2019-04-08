@@ -1,6 +1,10 @@
 package utils
 
-import "k8s.io/api/core/v1"
+import (
+	log "github.com/astaxie/beego/logs"
+
+	"k8s.io/api/core/v1"
+)
 
 // Is the Node for GPU sharing
 func IsGPUSharingNode(node *v1.Node) bool {
@@ -47,4 +51,18 @@ func GetAllocatableGPUCountInNode(node *v1.Node) int {
 	}
 
 	return int(val.Value())
+}
+
+// GetGPUMemoryFromPodAnnotation gets the GPU Memory of the node
+func GetGPUMemoryFromNodeStatus(node *v1.Node) (gpuMemory uint) {
+	quantity, found := node.Status.Capacity[ResourceName]
+	if found {
+		s, ok := quantity.AsInt64()
+		if ok {
+			gpuMemory += uint(s)
+		}
+	}
+	log.Debug("node %s in ns %s with status %v has GPU Mem %d MiB",
+		node.Name, node.Namespace, node.Status.Phase, gpuMemory)
+	return gpuMemory
 }

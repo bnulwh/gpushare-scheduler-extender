@@ -4,6 +4,9 @@ import (
 	"flag"
 	"fmt"
 	log "github.com/astaxie/beego/logs"
+	"github.com/bnulwh/gpushare-scheduler-extender/pkg/cache"
+	"github.com/bnulwh/gpushare-scheduler-extender/pkg/utils"
+	"k8s.io/apimachinery/pkg/watch"
 	"net/http"
 	"os"
 	"strconv"
@@ -14,7 +17,7 @@ import (
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/scheduler"
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/utils/signals"
 	"github.com/julienschmidt/httprouter"
-
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -93,6 +96,7 @@ func main() {
 	flag.CommandLine.Parse([]string{})
 
 	threadness := StringToInt(os.Getenv("THREADNESS"))
+	namespace := os.Getenv("WATCH_NAMESPACE")
 
 	initKubeClient()
 	port := os.Getenv("PORT")
@@ -119,6 +123,10 @@ func main() {
 
 	go controller.Run(threadness, stopCh)
 
+	go startWatchNodes(controller.GetSchedulerCache())
+
+	go startWatchPods(namespace, controller.GetSchedulerCache())
+
 	gpusharePredicate := scheduler.NewGPUsharePredicate(clientset, controller.GetSchedulerCache())
 	gpushareBind := scheduler.NewGPUShareBind(clientset, controller.GetSchedulerCache())
 	gpushareInspect := scheduler.NewGPUShareInspect(controller.GetSchedulerCache())
@@ -134,6 +142,72 @@ func main() {
 	log.Info("Server starting on the port :%s", port)
 	if err := http.ListenAndServe(":"+port, router); err != nil {
 		log.Critical(err)
+	}
+}
+
+func startWatchPods(namespace string, cache *cache.SchedulerCache) {
+	log.Info("start watch ns %s's pods")
+	w, err := clientset.CoreV1().Pods(namespace).Watch(metav1.ListOptions{LabelSelector: utils.ResourceName})
+	if err != nil {
+		log.Warning("watch ns %s's pods warning: %s", err)
+	}
+	for {
+		select {
+		case e, _ := <-w.ResultChan():
+			switch e.Type {
+			case watch.Added:
+				log.Info("add %v", e.Object)
+				err = cache.BuildCache()
+				CheckError("build cache warning: %s", err)
+			case watch.Deleted:
+				log.Info("delete %v", e.Object)
+				err = cache.BuildCache()
+				CheckError("build cache warning: %s", err)
+			case watch.Modified:
+				log.Info("modify %v", e.Object)
+				err = cache.BuildCache()
+				CheckError("build cache warning: %s", err)
+			case watch.Error:
+				log.Error("Error %v", e.Object)
+			default:
+				log.Info("event: %s %v", e.Type, e.Object)
+			}
+		}
+	}
+}
+func CheckError(prefix string, err error) {
+	if err != nil {
+		log.Warning(prefix, err)
+	}
+}
+func startWatchNodes(cache *cache.SchedulerCache) {
+	log.Info("start watch nodes")
+	w, err := clientset.CoreV1().Nodes().Watch(metav1.ListOptions{})
+	if err != nil {
+		log.Warning("watch nodes warning: %s", err)
+	}
+	for {
+		select {
+		case e, _ := <-w.ResultChan():
+			switch e.Type {
+			case watch.Added:
+				log.Info("add %v", e.Object)
+				err = cache.BuildCache()
+				CheckError("build cache warning: %s", err)
+			case watch.Deleted:
+				log.Info("delete %v", e.Object)
+				err = cache.BuildCache()
+				CheckError("build cache warning: %s", err)
+			case watch.Modified:
+				log.Info("modify %v", e.Object)
+				err = cache.BuildCache()
+				CheckError("build cache warning: %s", err)
+			case watch.Error:
+				log.Error("Error %v", e.Object)
+			default:
+				log.Info("event: %s %v", e.Type, e.Object)
+			}
+		}
 	}
 }
 

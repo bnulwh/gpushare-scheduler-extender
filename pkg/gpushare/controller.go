@@ -60,12 +60,12 @@ type Controller struct {
 	removePodCache map[string]*v1.Pod
 }
 
-func NewController(clientset *kubernetes.Clientset, kubeInformerFactory kubeinformers.SharedInformerFactory, stopCh <-chan struct{}) (*Controller, error) {
-	log.Info("info: Creating event broadcaster")
+func NewController(namespace string, clientset *kubernetes.Clientset, kubeInformerFactory kubeinformers.SharedInformerFactory, stopCh <-chan struct{}) (*Controller, error) {
+	log.Info("====Creating controller")
+	defer log.Info("====Finish create controller")
 	eventBroadcaster := record.NewBroadcaster()
 	// eventBroadcaster.StartLogging(log.Infof)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: clientset.CoreV1().Events("")})
-	//eventBroadcaster.StartRecordingToSink(nil)
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, v1.EventSource{Component: "gpushare-schd-extender"})
 
 	c := &Controller{
@@ -80,16 +80,18 @@ func NewController(clientset *kubernetes.Clientset, kubeInformerFactory kubeinfo
 		FilterFunc: func(obj interface{}) bool {
 			switch t := obj.(type) {
 			case *v1.Pod:
-				// log.Printf("debug: added pod %s in ns %s", t.Name, t.Namespace)
+				log.Debug("added pod %s in ns %s", t.Name, t.Namespace)
 				return utils.IsGPUsharingPod(t)
 			case clientgocache.DeletedFinalStateUnknown:
 				if pod, ok := t.Obj.(*v1.Pod); ok {
-					log.Debug("debug: delete pod %s in ns %s", pod.Name, pod.Namespace)
+					log.Debug("delete pod %s in ns %s", pod.Name, pod.Namespace)
 					return utils.IsGPUsharingPod(pod)
 				}
+				log.Error("unable to convert object %T to *v1.Pod in %T", obj, c)
 				runtime.HandleError(fmt.Errorf("unable to convert object %T to *v1.Pod in %T", obj, c))
 				return false
 			default:
+				log.Error("unable to handle object in %T: %T", c, obj)
 				runtime.HandleError(fmt.Errorf("unable to handle object in %T: %T", c, obj))
 				return false
 			}
@@ -113,23 +115,25 @@ func NewController(clientset *kubernetes.Clientset, kubeInformerFactory kubeinfo
 	go kubeInformerFactory.Start(stopCh)
 
 	// Create scheduler Cache
-	c.schedulerCache = cache.NewSchedulerCache(c.nodeLister, c.podLister)
+	c.schedulerCache = cache.NewSchedulerCache(namespace, c.nodeLister, c.podLister)
 
-	log.Info("info: begin to wait for cache")
+	log.Info("begin to wait for cache")
 
 	if ok := clientgocache.WaitForCacheSync(stopCh, c.nodeInformerSynced); !ok {
+		log.Error("failed to wait for node caches to sync")
 		return nil, fmt.Errorf("failed to wait for node caches to sync")
 	} else {
-		log.Info("info: init the node cache successfully")
+		log.Info("init the node cache successfully")
 	}
 
 	if ok := clientgocache.WaitForCacheSync(stopCh, c.podInformerSynced); !ok {
+		log.Error("failed to wait for pod caches to sync")
 		return nil, fmt.Errorf("failed to wait for pod caches to sync")
 	} else {
-		log.Info("info: init the pod cache successfully")
+		log.Info("init the pod cache successfully")
 	}
 
-	log.Info("info: end to wait for cache")
+	log.Info("end to wait for cache")
 
 	return c, nil
 }
@@ -175,25 +179,28 @@ func (c *Controller) runWorker() {
 // invoked concurrently with the same key.
 func (c *Controller) syncPod(key string) (forget bool, err error) {
 	ns, name, err := clientgocache.SplitMetaNamespaceKey(key)
-	log.Debug("debug: begin to sync gpushare pod %s in ns %s", name, ns)
+	log.Info("begin to sync gpushare pod %s in ns %s", name, ns)
+	defer log.Info("finish to sync gpushare pod %s in ns %s", name, ns)
+
 	if err != nil {
+		log.Warning("sync gpushare pod %s in ns %s failed: %s", name, ns, err)
 		return false, err
 	}
 
 	pod, err := c.podLister.Pods(ns).Get(name)
 	switch {
 	case errors.IsNotFound(err):
-		log.Debug("debug: pod %s in ns %s has been deleted.", name, ns)
+		log.Warning("pod %s in ns %s has been deleted.", name, ns)
 		pod, found := c.removePodCache[key]
 		if found {
 			c.schedulerCache.RemovePod(pod)
 			delete(c.removePodCache, key)
 		}
 	case err != nil:
-		log.Warning("warn: unable to retrieve pod %v from the store: %v", key, err)
+		log.Warning("unable to retrieve pod %v from the store: %v", key, err)
 	default:
 		if utils.IsCompletePod(pod) {
-			log.Debug("debug: pod %s in ns %s has completed.", name, ns)
+			log.Info("pod %s in ns %s has completed.", name, ns)
 			c.schedulerCache.RemovePod(pod)
 		} else {
 			err := c.schedulerCache.AddOrUpdatePod(pod)
@@ -210,12 +217,12 @@ func (c *Controller) syncPod(key string) (forget bool, err error) {
 // attempt to process it.
 func (c *Controller) processNextWorkItem() bool {
 	log.Info("begin processNextWorkItem()")
+	defer log.Info("end processNextWorkItem()")
 	key, quit := c.podQueue.Get()
 	if quit {
 		return false
 	}
 	defer c.podQueue.Done(key)
-	defer log.Info("end processNextWorkItem()")
 	forget, err := c.syncPod(key.(string))
 	if err == nil {
 		// log.Printf("Error syncing pods: %v", err)
@@ -235,7 +242,7 @@ func (c *Controller) processNextWorkItem() bool {
 func (c *Controller) addPodToCache(obj interface{}) {
 	pod, ok := obj.(*v1.Pod)
 	if !ok {
-		log.Warning("warn: cannot convert to *v1.Pod: %v", obj)
+		log.Warning("cannot convert to *v1.Pod: %v", obj)
 		return
 	}
 
@@ -246,7 +253,7 @@ func (c *Controller) addPodToCache(obj interface{}) {
 
 	podKey, err := KeyFunc(pod)
 	if err != nil {
-		log.Warning("warn: Failed to get the jobkey: %v", err)
+		log.Warning("Failed to get the jobkey: %v", err)
 		return
 	}
 
@@ -257,14 +264,15 @@ func (c *Controller) addPodToCache(obj interface{}) {
 }
 
 func (c *Controller) updatePodInCache(oldObj, newObj interface{}) {
+
 	oldPod, ok := oldObj.(*v1.Pod)
 	if !ok {
-		log.Warning("warn: cannot convert oldObj to *v1.Pod: %v", oldObj)
+		log.Warning("cannot convert oldObj to *v1.Pod: %v", oldObj)
 		return
 	}
 	newPod, ok := newObj.(*v1.Pod)
 	if !ok {
-		log.Warning("warn: cannot convert newObj to *v1.Pod: %v", newObj)
+		log.Warning("cannot convert newObj to *v1.Pod: %v", newObj)
 		return
 	}
 	needUpdate := false
@@ -282,15 +290,15 @@ func (c *Controller) updatePodInCache(oldObj, newObj interface{}) {
 	if needUpdate {
 		podKey, err := KeyFunc(newPod)
 		if err != nil {
-			log.Warning("warn: Failed to get the jobkey: %v", err)
+			log.Warning("Failed to get the jobkey: %v", err)
 			return
 		}
-		log.Info("info: Need to update pod name %s in ns %s and old status is %v, new status is %v; its old annotation %v and new annotation %v",
+		log.Info("Need to update pod name %s in ns %s and old status is %v, new status is %v; its old annotation %v and new annotation %v",
 			newPod.Name, newPod.Namespace, oldPod.Status.Phase, newPod.Status.Phase,
 			oldPod.Annotations, newPod.Annotations)
 		c.podQueue.Add(podKey)
 	} else {
-		log.Debug("debug: No need to update pod name %s in ns %s and old status is %v, new status is %v; its old annotation %v and new annotation %v",
+		log.Debug("No need to update pod name %s in ns %s and old status is %v, new status is %v; its old annotation %v and new annotation %v",
 			newPod.Name, newPod.Namespace, oldPod.Status.Phase, newPod.Status.Phase,
 			oldPod.Annotations, newPod.Annotations)
 	}
@@ -307,18 +315,18 @@ func (c *Controller) deletePodFromCache(obj interface{}) {
 		var ok bool
 		pod, ok = t.Obj.(*v1.Pod)
 		if !ok {
-			log.Warning("warn: cannot convert to *v1.Pod: %v", t.Obj)
+			log.Warning("cannot convert to *v1.Pod: %v", t.Obj)
 			return
 		}
 	default:
-		log.Warning("warn: cannot convert to *v1.Pod: %v", t)
+		log.Warning("cannot convert to *v1.Pod: %v", t)
 		return
 	}
 
-	log.Debug("debug: delete pod %s in ns %s", pod.Name, pod.Namespace)
+	log.Debug("delete pod %s in ns %s", pod.Name, pod.Namespace)
 	podKey, err := KeyFunc(pod)
 	if err != nil {
-		log.Warning("warn: Failed to get the jobkey: %v", err)
+		log.Warning("Failed to get the jobkey: %v", err)
 		return
 	}
 	c.podQueue.Add(podKey)
