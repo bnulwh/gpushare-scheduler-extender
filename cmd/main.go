@@ -97,7 +97,6 @@ func main() {
 	flag.CommandLine.Parse([]string{})
 
 	threadness := StringToInt(os.Getenv("THREADNESS"))
-	namespace := os.Getenv("WATCH_NAMESPACE")
 
 	initKubeClient()
 	port := os.Getenv("PORT")
