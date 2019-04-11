@@ -60,7 +60,7 @@ type Controller struct {
 	removePodCache map[string]*v1.Pod
 }
 
-func NewController(namespace string, clientset *kubernetes.Clientset, kubeInformerFactory kubeinformers.SharedInformerFactory, stopCh <-chan struct{}) (*Controller, error) {
+func NewController(clientset *kubernetes.Clientset, kubeInformerFactory kubeinformers.SharedInformerFactory, stopCh <-chan struct{}) (*Controller, error) {
 	log.Info("====Creating controller")
 	defer log.Info("====Finish create controller")
 	eventBroadcaster := record.NewBroadcaster()
@@ -115,7 +115,7 @@ func NewController(namespace string, clientset *kubernetes.Clientset, kubeInform
 	go kubeInformerFactory.Start(stopCh)
 
 	// Create scheduler Cache
-	c.schedulerCache = cache.NewSchedulerCache(namespace, c.nodeLister, c.podLister)
+	c.schedulerCache = cache.NewSchedulerCache(c.nodeLister, c.podLister)
 
 	log.Info("begin to wait for cache")
 

@@ -151,16 +151,15 @@ func VersionRoute(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	fmt.Fprint(w, fmt.Sprint(version))
 }
 
-func AddVersion(router *httprouter.Router) {
-	router.GET(versionPath, DebugLogging(VersionRoute, versionPath))
-}
-
 func DebugLogging(h httprouter.Handle, path string) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		log.Debug("debug: %s  request body = %s", path, r.Body)
 		h(w, r, p)
 		log.Debug("debug: %s response= %s", path, w)
 	}
+}
+func AddVersion(router *httprouter.Router) {
+	router.GET(versionPath, DebugLogging(VersionRoute, versionPath))
 }
 
 func AddPredicate(router *httprouter.Router, predicate *scheduler.Predicate) {

@@ -6,6 +6,7 @@ import (
 	log "github.com/astaxie/beego/logs"
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/cache"
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/utils"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/watch"
 	"net/http"
 	"os"
@@ -125,7 +126,7 @@ func main() {
 
 	go startWatchNodes(controller.GetSchedulerCache())
 
-	go startWatchPods(namespace, controller.GetSchedulerCache())
+	//go startWatchPods(namespace, controller.GetSchedulerCache())
 
 	gpusharePredicate := scheduler.NewGPUsharePredicate(clientset, controller.GetSchedulerCache())
 	gpushareBind := scheduler.NewGPUShareBind(clientset, controller.GetSchedulerCache())
@@ -157,15 +158,15 @@ func startWatchPods(namespace string, cache *cache.SchedulerCache) {
 			switch e.Type {
 			case watch.Added:
 				log.Info("add %v", e.Object)
-				err = cache.BuildCache()
+				err = cache.BuildPodsCache()
 				CheckError("build cache warning: %s", err)
 			case watch.Deleted:
 				log.Info("delete %v", e.Object)
-				err = cache.BuildCache()
+				err = cache.BuildPodsCache()
 				CheckError("build cache warning: %s", err)
 			case watch.Modified:
 				log.Info("modify %v", e.Object)
-				err = cache.BuildCache()
+				err = cache.BuildPodsCache()
 				CheckError("build cache warning: %s", err)
 			case watch.Error:
 				log.Error("Error %v", e.Object)
@@ -189,23 +190,28 @@ func startWatchNodes(cache *cache.SchedulerCache) {
 	for {
 		select {
 		case e, _ := <-w.ResultChan():
-			switch e.Type {
-			case watch.Added:
-				log.Info("add %v", e.Object)
-				err = cache.BuildCache()
-				CheckError("build cache warning: %s", err)
-			case watch.Deleted:
-				log.Info("delete %v", e.Object)
-				err = cache.BuildCache()
-				CheckError("build cache warning: %s", err)
-			case watch.Modified:
-				log.Info("modify %v", e.Object)
-				err = cache.BuildCache()
-				CheckError("build cache warning: %s", err)
-			case watch.Error:
-				log.Error("Error %v", e.Object)
-			default:
-				log.Info("event: %s %v", e.Type, e.Object)
+			obj := e.Object
+			node, ok := obj.(*v1.Node)
+			if !ok {
+				log.Warning("%v %v", e.Type, e.Object)
+			} else {
+				switch e.Type {
+				case watch.Added:
+					log.Info("add node %v", e.Object)
+					err = cache.AddOrUpdateNode(node)
+					CheckError("build cache warning: %s", err)
+				case watch.Deleted:
+					log.Info("delete node %v", e.Object)
+					cache.RemoveNode(node)
+				case watch.Modified:
+					log.Info("modify %v", e.Object)
+					//err = cache.AddOrUpdateNode(node)
+					//CheckError("build cache warning: %s", err)
+				case watch.Error:
+					log.Error("Error %v", e.Object)
+				default:
+					log.Info("event: %s %v", e.Type, e.Object)
+				}
 			}
 		}
 	}

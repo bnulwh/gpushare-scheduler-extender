@@ -12,7 +12,6 @@ import (
 )
 
 type SchedulerCache struct {
-	Namespace string
 	// a map from pod key to podState.
 	nodes map[string]*NodeInfo
 
@@ -27,10 +26,9 @@ type SchedulerCache struct {
 	nLock     *sync.RWMutex
 }
 
-func NewSchedulerCache(namespace string, nLister corelisters.NodeLister, pLister corelisters.PodLister) *SchedulerCache {
+func NewSchedulerCache(nLister corelisters.NodeLister, pLister corelisters.PodLister) *SchedulerCache {
 	log.Info("Create scheduler cache ok")
 	return &SchedulerCache{
-		Namespace:  namespace,
 		nodes:      make(map[string]*NodeInfo),
 		nodeLister: nLister,
 		podLister:  pLister,
@@ -53,6 +51,20 @@ func (cache *SchedulerCache) BuildCache() error {
 	defer log.Info("end to build scheduler cache")
 	err := cache.buildNodeCache()
 	err = cache.buildPodCache()
+	return err
+}
+
+func (cache *SchedulerCache) BuildNodesCache() error {
+	log.Info("begin to build scheduler node cache")
+	defer log.Info("end to build scheduler node cache")
+	err := cache.buildNodeCache()
+	return err
+}
+
+func (cache *SchedulerCache) BuildPodsCache() error {
+	log.Info("begin to build scheduler pods cache")
+	defer log.Info("end to build scheduler pods cache")
+	err := cache.buildPodCache()
 	return err
 }
 
@@ -118,6 +130,25 @@ func (cache *SchedulerCache) RemovePod(pod *v1.Pod) {
 	cache.forgetPod(pod.UID)
 }
 
+// The lock is in cacheNode
+func (cache *SchedulerCache) RemoveNode(node *v1.Node) {
+	log.Info("Begin remove node %s in ns %s from cache", node.Name, node.Namespace)
+	defer log.Info("Finish remove node %s in ns %s from cache", node.Name, node.Namespace)
+	log.Debug("Remove node info: %v", node)
+	log.Debug("Node %v", cache.nodes)
+	var names []types.UID
+	for _, pod := range cache.knownPods {
+		if pod.Spec.NodeName == node.Name {
+			names = append(names, pod.UID)
+			log.Info("will remove pod %s in ns %s in node %s", pod.Name, pod.Namespace, node.Name)
+		}
+	}
+	for _, name := range names {
+		cache.forgetPod(name)
+	}
+	delete(cache.nodes, node.Name)
+}
+
 // Get or build nodeInfo if it doesn't exist
 func (cache *SchedulerCache) GetNodeInfo(name string) (*NodeInfo, error) {
 	log.Info("Begin get node %s from cache", name)
@@ -180,7 +211,7 @@ func createSelector() labels.Selector {
 
 func (cache *SchedulerCache) buildPodCache() error {
 	selector := createSelector()
-	pods, err := cache.podLister.Pods(cache.Namespace).List(selector)
+	pods, err := cache.podLister.List(selector)
 	if err != nil {
 		log.Warning("list pods failed: %s", err)
 		return err
