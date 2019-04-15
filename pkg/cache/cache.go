@@ -54,10 +54,25 @@ func (cache *SchedulerCache) BuildCache() error {
 	return err
 }
 
+func (cache *SchedulerCache) logPodCache() {
+	log.Info("----Pods in cache: ----")
+	for _, pod := range cache.knownPods {
+		log.Info("%-30s | %-50s", pod.Namespace, pod.Name)
+	}
+}
+func (cache *SchedulerCache) logNodeCache() {
+
+	log.Info("----Nodes in cache: ----")
+	for _, node := range cache.nodes {
+		log.Info("%s", node.name)
+	}
+}
+
 func (cache *SchedulerCache) BuildNodesCache() error {
 	log.Info("begin to build scheduler node cache")
 	defer log.Info("end to build scheduler node cache")
 	err := cache.buildNodeCache()
+	cache.logNodeCache()
 	return err
 }
 
@@ -65,6 +80,7 @@ func (cache *SchedulerCache) BuildPodsCache() error {
 	log.Info("begin to build scheduler pods cache")
 	defer log.Info("end to build scheduler pods cache")
 	err := cache.buildPodCache()
+	cache.logPodCache()
 	return err
 }
 
@@ -83,9 +99,10 @@ func (cache *SchedulerCache) KnownPod(podUID types.UID) bool {
 
 func (cache *SchedulerCache) AddOrUpdatePod(pod *v1.Pod) error {
 	log.Info("Begin Add or update pod %s in ns %s from cache", pod.Name, pod.Namespace)
+	defer cache.logPodCache()
 	defer log.Info("Finish Add or update pod %s in ns %s from cache", pod.Name, pod.Namespace)
 	log.Info("Pod info: %v", pod)
-	log.Info("Nodes %v", cache.nodes)
+	log.Debug("Nodes %v", cache.nodes)
 	if len(pod.Spec.NodeName) == 0 {
 		log.Warning("pod %s in ns %s is not assigned to any node, skip", pod.Name, pod.Namespace)
 		return nil
@@ -110,8 +127,9 @@ func (cache *SchedulerCache) AddOrUpdatePod(pod *v1.Pod) error {
 func (cache *SchedulerCache) AddOrUpdateNode(node *v1.Node) error {
 	log.Info("Begin Add or update node %s in ns %s from cache", node.Name, node.Namespace)
 	defer log.Info("Finish Add or update node %s in ns %s from cache", node.Name, node.Namespace)
-	log.Info("Node info: %v", node)
+	log.Debug("Node info: %v", node)
 	_, err := cache.GetNodeInfo(node.Name)
+	cache.logNodeCache()
 	return err
 }
 
@@ -128,6 +146,7 @@ func (cache *SchedulerCache) RemovePod(pod *v1.Pod) {
 		log.Warning("Failed to get node %s due to %v", pod.Spec.NodeName, err)
 	}
 	cache.forgetPod(pod.UID)
+	cache.logPodCache()
 }
 
 // The lock is in cacheNode
@@ -147,6 +166,8 @@ func (cache *SchedulerCache) RemoveNode(node *v1.Node) {
 		cache.forgetPod(name)
 	}
 	delete(cache.nodes, node.Name)
+	cache.logNodeCache()
+	cache.logPodCache()
 }
 
 // Get or build nodeInfo if it doesn't exist

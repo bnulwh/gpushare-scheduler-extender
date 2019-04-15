@@ -189,27 +189,29 @@ func startWatchNodes(cache *cache.SchedulerCache) {
 	for {
 		select {
 		case e, _ := <-w.ResultChan():
-			obj := e.Object
-			node, ok := obj.(*v1.Node)
-			if !ok {
-				log.Warning("%v %v", e.Type, e.Object)
-			} else {
-				switch e.Type {
-				case watch.Added:
-					log.Info("add node %v", e.Object)
-					err = cache.AddOrUpdateNode(node)
-					CheckError("build cache warning: %s", err)
-				case watch.Deleted:
-					log.Info("delete node %v", e.Object)
-					cache.RemoveNode(node)
-				case watch.Modified:
-					log.Info("modify %v", e.Object)
-					//err = cache.AddOrUpdateNode(node)
-					//CheckError("build cache warning: %s", err)
-				case watch.Error:
-					log.Error("Error %v", e.Object)
-				default:
-					log.Info("event: %s %v", e.Type, e.Object)
+			if e.Object != nil {
+				obj := e.Object
+				node, ok := obj.(*v1.Node)
+				if !ok {
+					log.Warning("%v %v", e.Type, e.Object)
+				} else {
+					switch e.Type {
+					case watch.Added:
+						log.Info("add node %s", node.Name)
+						err = cache.AddOrUpdateNode(node)
+						CheckError("build cache warning: %s", err)
+					case watch.Deleted:
+						log.Info("delete node %s", node.Name)
+						cache.RemoveNode(node)
+					case watch.Modified:
+						log.Info("modify %s", node.Name)
+						//err = cache.AddOrUpdateNode(node)
+						//CheckError("build cache warning: %s", err)
+					case watch.Error:
+						log.Error("Error %s", node.Name)
+					default:
+						log.Info("event: %s %s", e.Type, node.Name)
+					}
 				}
 			}
 		}

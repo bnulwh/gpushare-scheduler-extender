@@ -120,7 +120,7 @@ func (n *NodeInfo) Assume(pod *v1.Pod) (allocatable bool) {
 	availableGPUs := n.getAvailableGPUs()
 	reqGPU := uint(utils.GetGPUMemoryFromPodResource(pod))
 	log.Info("AvailableGPUs: %v in node %s", availableGPUs, n.name)
-	log.Info("Pod %s in ns %s need %s %s Mib", pod.Name, pod.Namespace, utils.ResourceName, reqGPU)
+	log.Info("Pod %s in ns %s need %s %d Mib", pod.Name, pod.Namespace, utils.ResourceName, reqGPU)
 	if len(availableGPUs) > 0 {
 		for devID := 0; devID < len(n.devs); devID++ {
 			availableGPU, ok := availableGPUs[devID]

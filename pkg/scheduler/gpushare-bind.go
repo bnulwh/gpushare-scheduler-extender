@@ -51,7 +51,7 @@ func getPod(name string, namespace string, podUID types.UID, clientset *kubernet
 		log.Warning("--- Failed to handle pod %s in ns %s due to error %v", name, namespace, err)
 		return nil, err
 	}
-	log.Info("Get Pod %s in ns % from cache success", name, namespace)
+	log.Info("Get Pod %s in ns %s from cache success", name, namespace)
 	if pod.UID != podUID {
 		log.Info("not expected podUID %v, get pod from api-server", podUID)
 		pod, err = clientset.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})

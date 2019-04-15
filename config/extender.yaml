@@ -8,28 +8,14 @@ data:
   {
     "kind" : "Policy",
     "apiVersion" : "v1",
-    "predicates" : [
-      {"name" : "PodFitsHostPorts"},
-      {"name" : "PodFitsResources"},
-      {"name" : "NoDiskConflict"},
-      {"name" : "MatchNodeSelector"},
-      {"name" : "HostName"}
-    ],
-    "priorities" : [
-      {"name" : "LeastRequestedPriority", "weight" : 1},
-      {"name" : "BalancedResourceAllocation", "weight" : 1},
-      {"name" : "ServiceSpreadingPriority", "weight" : 1},
-      {"name" : "EqualPriority", "weight" : 1}
-    ],
     "extenders" : [{
-      "urlPrefix": "http://127.0.0.1:32566/gpushare-scheduler",
+      "urlPrefix": "http://127.0.0.1:12345/gpushare-scheduler",
       "filterVerb": "filter",
       "bindVerb": "bind",
       "weight": 9,
       "enableHttps": false,
       "nodeCacheCapable": true
-    }],
-    "hardPodAffinitySymmetricWeight" : 10
+    }]
   }
 ---
 apiVersion: apps/v1
@@ -52,7 +38,7 @@ spec:
       volumes:
       - name: gpushare-scheduler-config
         configMap:
-          name: gpushare-scheduler-config
+          name: gpushare-scheduler-policy
       - name: kubeconfig
         hostPath:
           path: /etc/kubernetes
@@ -97,13 +83,13 @@ spec:
             name: kubeconfig
           - mountPath: /opt/k8s/node
             name: caconfig
-        livenessProbe:
-          httpGet:
-            path: /version
-            port: 12345
-        readinessProbe:
-          httpGet:
-            path: /version
-            port: 12345
+#        livenessProbe:
+#          httpGet:
+#            path: /version
+#            port: 12345
+#        readinessProbe:
+#          httpGet:
+#            path: /version
+#            port: 12345
         ports:
           - containerPort: 12345
