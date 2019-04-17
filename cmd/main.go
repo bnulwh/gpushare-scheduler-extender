@@ -125,7 +125,7 @@ func main() {
 
 	go startWatchNodes(controller.GetSchedulerCache())
 
-	//go startWatchPods(namespace, controller.GetSchedulerCache())
+	go startWatchPods(controller.GetSchedulerCache())
 
 	gpusharePredicate := scheduler.NewGPUsharePredicate(clientset, controller.GetSchedulerCache())
 	gpushareBind := scheduler.NewGPUShareBind(clientset, controller.GetSchedulerCache())
@@ -145,32 +145,39 @@ func main() {
 	}
 }
 
-func startWatchPods(namespace string, cache *cache.SchedulerCache) {
+func startWatchPods(cache *cache.SchedulerCache) {
 	log.Info("start watch ns %s's pods")
-	w, err := clientset.CoreV1().Pods(namespace).Watch(metav1.ListOptions{LabelSelector: utils.ResourceName})
+	w, err := clientset.CoreV1().Pods(v1.NamespaceAll).Watch(metav1.ListOptions{LabelSelector: utils.ResourceName})
 	if err != nil {
 		log.Warning("watch ns %s's pods warning: %s", err)
 	}
 	for {
 		select {
 		case e, _ := <-w.ResultChan():
-			switch e.Type {
-			case watch.Added:
-				log.Info("add %v", e.Object)
-				err = cache.BuildPodsCache()
-				CheckError("build cache warning: %s", err)
-			case watch.Deleted:
-				log.Info("delete %v", e.Object)
-				err = cache.BuildPodsCache()
-				CheckError("build cache warning: %s", err)
-			case watch.Modified:
-				log.Info("modify %v", e.Object)
-				err = cache.BuildPodsCache()
-				CheckError("build cache warning: %s", err)
-			case watch.Error:
-				log.Error("Error %v", e.Object)
-			default:
-				log.Info("event: %s %v", e.Type, e.Object)
+			if e.Object != nil {
+				obj := e.Object
+				pod, ok := obj.(*v1.Pod)
+				if !ok {
+					log.Warning("%v %v", e.Type, e.Object)
+				} else {
+					switch e.Type {
+					case watch.Added:
+						log.Info("add pod %s in ns %s", pod.Name, pod.Namespace)
+						err = cache.AddOrUpdatePod(pod)
+						CheckError("build cache warning: %s", err)
+					case watch.Deleted:
+						log.Info("delete pod %s in ns %s", pod.Name, pod.Namespace)
+						cache.RemovePod(pod)
+					case watch.Modified:
+						log.Info("modify pod %s in ns %s", pod.Name, pod.Namespace)
+						err = cache.AddOrUpdatePod(pod)
+						CheckError("build cache warning: %s", err)
+					case watch.Error:
+						log.Error("Error pod %s in ns %s", pod.Name, pod.Namespace)
+					default:
+						log.Info("event: %s %v", e.Type, e.Object)
+					}
+				}
 			}
 		}
 	}
