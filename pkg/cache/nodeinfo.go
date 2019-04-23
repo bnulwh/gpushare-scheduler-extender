@@ -281,3 +281,13 @@ func (n *NodeInfo) getAllGPUs() (allGPUs map[int]uint) {
 	log.Info("getAllGPUs: %v in node %s, and dev %v", allGPUs, n.name, n.devs)
 	return allGPUs
 }
+
+func (n *NodeInfo) GetUsedGPUMemory() uint {
+	var usedMem uint
+	usedMem = 0
+	for _, dev := range n.devs {
+		usedMem += dev.GetUsedGPUMemory()
+	}
+	log.Info("getUsedGPUs: %v in node %s, and devs %v", usedMem, n.name, n.devs)
+	return usedMem
+}

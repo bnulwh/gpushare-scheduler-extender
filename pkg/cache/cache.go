@@ -2,16 +2,17 @@ package cache
 
 import (
 	log "github.com/astaxie/beego/logs"
-	"sync"
-
 	"github.com/bnulwh/gpushare-scheduler-extender/pkg/utils"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	corelisters "k8s.io/client-go/listers/core/v1"
+	"sync"
 )
 
 type SchedulerCache struct {
+	clientset *kubernetes.Clientset
 	// a map from pod key to podState.
 	nodes map[string]*NodeInfo
 
@@ -26,9 +27,10 @@ type SchedulerCache struct {
 	nLock     *sync.RWMutex
 }
 
-func NewSchedulerCache(nLister corelisters.NodeLister, pLister corelisters.PodLister) *SchedulerCache {
+func NewSchedulerCache(clientset *kubernetes.Clientset, nLister corelisters.NodeLister, pLister corelisters.PodLister) *SchedulerCache {
 	log.Info("Create scheduler cache ok")
 	return &SchedulerCache{
+		clientset:  clientset,
 		nodes:      make(map[string]*NodeInfo),
 		nodeLister: nLister,
 		podLister:  pLister,
@@ -117,6 +119,13 @@ func (cache *SchedulerCache) AddOrUpdatePod(pod *v1.Pod) error {
 	if n.addOrUpdatePod(podCopy) {
 		// put it into known pod
 		cache.rememberPod(pod.UID, podCopy)
+		total := n.GetTotalGPUMemory()
+		used := n.GetUsedGPUMemory()
+		updatedNode, err := utils.UpdateNodeStatus(cache.clientset, n.node, uint(total)-used)
+		if err != nil {
+			log.Error("update node %s status failed: %v", n.node.Name, err)
+		}
+		cache.nodes[n.node.Name].node = updatedNode
 	} else {
 		log.Warning("pod %s in ns %s's gpu id is %d, it's illegal, skip",
 			pod.Name, pod.Namespace, utils.GetGPUIDFromAnnotation(pod))

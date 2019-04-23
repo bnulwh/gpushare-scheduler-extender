@@ -115,7 +115,7 @@ func NewController(clientset *kubernetes.Clientset, kubeInformerFactory kubeinfo
 	go kubeInformerFactory.Start(stopCh)
 
 	// Create scheduler Cache
-	c.schedulerCache = cache.NewSchedulerCache(c.nodeLister, c.podLister)
+	c.schedulerCache = cache.NewSchedulerCache(clientset, c.nodeLister, c.podLister)
 
 	log.Info("begin to wait for cache")
 
